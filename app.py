@@ -1,74 +1,61 @@
 import streamlit as st
-import pandas as pd
-import pickle
+import joblib
+import numpy as np
 from streamlit_lottie import st_lottie
 import json
 
-# Page config
-st.set_page_config(page_title="Heart Attack Prediction", page_icon="❤️", layout="centered")
+# Page setup
+st.set_page_config(page_title="Heart Risk Checker", page_icon="❤️", layout="centered")
 
-# Load model and scaler
-model = pickle.load(open("heart_model.pkl", "rb"))
-scaler = pickle.load(open("scaler.pkl", "rb"))
+model = joblib.load("heart_model.pkl")
+scaler = joblib.load("scaler.pkl")
 
-# Load Lottie animation
-def load_lottie(path):
-    with open(path, "r") as f:
+def load_lottie(filepath):
+    with open(filepath, "r") as f:
         return json.load(f)
 
 lottie_heart = load_lottie("heartbeat.json")
 
-# Custom fonts
+# Custom styling
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;600&display=swap');
     html, body, [class*="css"] {
-        font-family: 'Montserrat', sans-serif;
+        font-family: 'Rubik', sans-serif;
+    }
+    .dark-theme {
+        background-color: #1e1e1e !important;
+        color: white !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Header
-st.title("❤️ Heart Attack Risk Predictor")
-st_lottie(lottie_heart, speed=1, height=200)
-
-st.markdown("Enter your health information to predict heart attack risk.")
-
 # Dark mode toggle
-dark_mode = st.checkbox("🌙 Enable Dark Mode")
+dark_mode = st.toggle("🌙 Enable Dark Mode")
 if dark_mode:
-    st.markdown("""
-        <style>
-        body {
-            background-color: #1e1e1e;
-            color: #fafafa;
-        }
-        </style>
-    """, unsafe_allow_html=True)
+    st.markdown("<script>document.body.classList.add('dark-theme')</script>", unsafe_allow_html=True)
 
-# Input form (13 features)
-with st.form("heart_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        age = st.number_input("Age", 20, 100)
-        sex = st.selectbox("Sex", ["Female (0)", "Male (1)"])
-        cp = st.selectbox("Chest Pain Type", ["Typical Angina (0)", "Atypical Angina (1)", "Non-anginal Pain (2)", "Asymptomatic (3)"])
-        trestbps = st.number_input("Resting Blood Pressure", 80, 200)
-        chol = st.number_input("Cholesterol (mg/dL)", 100, 600)
-        fbs = st.selectbox("Fasting Blood Sugar > 120 mg/dl", ["No (0)", "Yes (1)"])
-        restecg = st.selectbox("Resting ECG", ["Normal (0)", "ST-T Abnormality (1)", "LV Hypertrophy (2)"])
-    with col2:
-        thalach = st.number_input("Max Heart Rate Achieved", 60, 220)
-        exang = st.selectbox("Exercise Induced Angina", ["No (0)", "Yes (1)"])
-        oldpeak = st.number_input("ST depression", 0.0, 6.0, step=0.1)
-        slope = st.selectbox("Slope of the peak exercise ST", ["Upsloping (0)", "Flat (1)", "Downsloping (2)"])
-        ca = st.selectbox("Major Vessels Colored", [0, 1, 2, 3])
-        thal = st.selectbox("Thalassemia", ["Normal (1)", "Fixed Defect (2)", "Reversible Defect (3)"])
+st.markdown("<h1 style='text-align: center; color: red;'>❤️ Heart Attack Risk Predictor</h1>", unsafe_allow_html=True)
+st_lottie(lottie_heart, height=200, key="heart")
+st.markdown("<h4 style='text-align: center;'>Predict your heart health with AI</h4>", unsafe_allow_html=True)
+st.markdown("---")
 
-    submitted = st.form_submit_button("🔍 Predict Risk")
+col1, col2 = st.columns(2)
+with col1:
+    age = st.number_input("Age", 20, 100)
+    sex = st.selectbox("Sex", ["Female (0)", "Male (1)"])
+    cp = st.selectbox("Chest Pain Type", ["Typical Angina (0)", "Atypical Angina (1)", "Non-anginal Pain (2)", "Asymptomatic (3)"])
+    trestbps = st.number_input("Resting BP", 80, 200)
+    chol = st.number_input("Cholesterol", 100, 600)
+with col2:
+    fbs = st.selectbox("Fasting Blood Sugar > 120", ["No (0)", "Yes (1)"])
+    restecg = st.selectbox("ECG Results", ["Normal (0)", "ST-T Abnormality (1)", "LV Hypertrophy (2)"])
+    thalach = st.number_input("Max Heart Rate", 60, 220)
+    exang = st.selectbox("Exercise Induced Angina", ["No (0)", "Yes (1)"])
 
-# Predict
-if submitted:
+st.markdown("---")
+
+if st.button("🧠 Predict Risk"):
     input_data = [
         age,
         int(sex[-2]),
@@ -78,18 +65,15 @@ if submitted:
         int(fbs[-2]),
         int(restecg[-2]),
         thalach,
-        int(exang[-2]),
-        oldpeak,
-        int(slope[-2]),
-        ca,
-        int(thal[-2])
+        int(exang[-2])
     ]
-
     scaled = scaler.transform([input_data])
-    prediction = model.predict(scaled)[0]
+    pred = model.predict(scaled)
 
-    if prediction == 1:
-        st.error("⚠️ High Risk of Heart Attack!")
+    if pred[0] == 1:
+        st.error("⚠️ High risk of heart attack. Please consult a doctor.")
     else:
-        st.success("✅ Low Risk — Keep up the good health!")
+        st.success("✅ Low risk. Keep living healthy!")
 
+st.markdown("---")
+st.markdown("<div style='text-align:center; font-size:13px;'>Made with ❤️ using Streamlit & ML</div>", unsafe_allow_html=True)
